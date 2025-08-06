@@ -1,57 +1,20 @@
 package main
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
-	"net/http"
 )
 
-type locations struct {
-	Count    int    `json:"count"`
-	Next     string `json:"next"`
-	Previous any    `json:"previous"`
-	Results  []struct {
-		Name string `json:"name"`
-		URL  string `json:"url"`
-	} `json:"results"`
-}
-
-func getLocations(url string) (locations, error) {
-	locs := locations{}
-
-	res, err := http.Get(url)
-	if err != nil {
-		return locs, fmt.Errorf("response is not received: %w", err)
-	}
-	if res.StatusCode > 299 {
-		return locs, fmt.Errorf("response failed with status code: %d", res.StatusCode)
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return locs, fmt.Errorf("reading body is failed: %w", err)
-	}
-
-	err = json.Unmarshal(body, &locs)
-	if err != nil {
-		return locs, fmt.Errorf("json unmarshaling is failed: %w", err)
-	}
-
-	return locs, nil
-}
-
 func commandMap(cfg *config) error {
-	var directionURL string
+	var directionURL *string
 
-	if cfg.Backward {
-		directionURL = cfg.Previous
+	if cfg.backward {
+		directionURL = cfg.previous
 	} else {
-		directionURL = cfg.Next
+		directionURL = cfg.next
 	}
 
-	locs, err := getLocations(directionURL)
+	locs, err := cfg.pokeapiClient.GetLocationList(directionURL)
 	if err != nil {
 		return err
 	}
@@ -60,19 +23,19 @@ func commandMap(cfg *config) error {
 		fmt.Println(loc.Name)
 	}
 
-	if locs.Previous == nil {
-		cfg.Previous = "https://pokeapi.co/api/v2/location-area"
-	} else {
-		cfg.Previous = locs.Previous.(string)
-	}
-	cfg.Next = locs.Next
+	cfg.previous = locs.Previous
+	cfg.next = locs.Next
 
-	cfg.Backward = false
+	cfg.backward = false
 
 	return nil
 }
 
 func commandMapB(cfg *config) error {
-	cfg.Backward = true
+	if cfg.previous == nil {
+		return errors.New("you're on the first page")
+	}
+
+	cfg.backward = true
 	return commandMap(cfg)
 }

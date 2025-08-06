@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/ar3ty/pokedexcli/internal/pokeapi"
 )
 
 type config struct {
-	Next     string
-	Previous string
-	Backward bool
+	pokeapiClient pokeapi.Client
+	next          *string
+	previous      *string
+	backward      bool
 }
 
 type cliCommand struct {
@@ -50,13 +53,8 @@ func cleanInput(text string) []string {
 	return words
 }
 
-func repl() {
+func repl(cfg *config) {
 	reader := bufio.NewScanner(os.Stdin)
-	cfg := config{
-		Next:     "https://pokeapi.co/api/v2/location-area",
-		Previous: "https://pokeapi.co/api/v2/location-area",
-		Backward: false,
-	}
 
 	for {
 		fmt.Print("Pokedex > ")
@@ -72,7 +70,7 @@ func repl() {
 			fmt.Println("Unknown command")
 			continue
 		} else {
-			err := command.callback(&cfg)
+			err := command.callback(cfg)
 			if err != nil {
 				fmt.Println(err)
 			}
