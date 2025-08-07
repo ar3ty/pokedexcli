@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/ar3ty/pokedexcli/internal/pokecache"
 )
 
 const (
@@ -14,13 +16,15 @@ const (
 
 type Client struct {
 	httpClient http.Client
+	Cache      pokecache.Cache
 }
 
-func NewClient(timeout time.Duration) Client {
+func NewClient(timeout, cacheInterval time.Duration) Client {
 	return Client{
 		httpClient: http.Client{
 			Timeout: timeout,
 		},
+		Cache: pokecache.NewCache(cacheInterval),
 	}
 }
 
@@ -34,6 +38,39 @@ type locations struct {
 	} `json:"results"`
 }
 
+func (c *Client) getResponse(url string) ([]byte, error) {
+	cached, isPresent := c.Cache.Get(url)
+
+	if isPresent {
+		return cached, nil
+	}
+
+	body := []byte{}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return body, fmt.Errorf("request is not formed: %w", err)
+	}
+
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return body, fmt.Errorf("response is not received: %w", err)
+	}
+	if res.StatusCode > 299 {
+		return body, fmt.Errorf("response failed with status code: %d", res.StatusCode)
+	}
+	defer res.Body.Close()
+
+	body, err = io.ReadAll(res.Body)
+	if err != nil {
+		return body, fmt.Errorf("reading body is failed: %w", err)
+	}
+
+	c.Cache.Add(url, body)
+
+	return body, nil
+}
+
 func (c *Client) GetLocationList(passedURL *string) (locations, error) {
 	url := baseURL + "/location-area"
 	if passedURL != nil {
@@ -42,18 +79,9 @@ func (c *Client) GetLocationList(passedURL *string) (locations, error) {
 
 	locs := locations{}
 
-	res, err := http.Get(url)
+	body, err := c.getResponse(url)
 	if err != nil {
-		return locs, fmt.Errorf("response is not received: %w", err)
-	}
-	if res.StatusCode > 299 {
-		return locs, fmt.Errorf("response failed with status code: %d", res.StatusCode)
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return locs, fmt.Errorf("reading body is failed: %w", err)
+		return locs, err
 	}
 
 	err = json.Unmarshal(body, &locs)
