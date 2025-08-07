@@ -28,16 +28,6 @@ func NewClient(timeout, cacheInterval time.Duration) Client {
 	}
 }
 
-type locations struct {
-	Count    int     `json:"count"`
-	Next     *string `json:"next"`
-	Previous *string `json:"previous"`
-	Results  []struct {
-		Name string `json:"name"`
-		URL  string `json:"url"`
-	} `json:"results"`
-}
-
 func (c *Client) getResponse(url string) ([]byte, error) {
 	cached, isPresent := c.Cache.Get(url)
 
@@ -90,4 +80,22 @@ func (c *Client) GetLocationList(passedURL *string) (locations, error) {
 	}
 
 	return locs, nil
+}
+
+func (c *Client) GetPokemonList(area string) (pokencounters, error) {
+	url := baseURL + "/location-area/" + area
+
+	pocs := pokencounters{}
+
+	body, err := c.getResponse(url)
+	if err != nil {
+		return pocs, err
+	}
+
+	err = json.Unmarshal(body, &pocs)
+	if err != nil {
+		return pocs, fmt.Errorf("json unmarshaling is failed: %w", err)
+	}
+
+	return pocs, nil
 }

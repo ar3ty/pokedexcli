@@ -19,7 +19,7 @@ type config struct {
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(*config) error
+	callback    func(*config, string) error
 }
 
 func getCommandRegistry() map[string]cliCommand {
@@ -44,6 +44,16 @@ func getCommandRegistry() map[string]cliCommand {
 			description: "Each subsequent call displays the names of previous 20 locations",
 			callback:    commandMapB,
 		},
+		"explore": {
+			name:        "explore",
+			description: "Takes <location-area> as argument, shows list of pokemons located there",
+			callback:    commandExplore,
+		},
+		"catch": {
+			name:        "catch",
+			description: "Takes <pokemon> as an argument, adds target to a user's pokedex if succeded",
+			callback:    commandCatch,
+		},
 	}
 }
 
@@ -65,12 +75,17 @@ func repl(cfg *config) {
 			continue
 		}
 
+		arg := ""
+		if len(words) == 2 {
+			arg = words[1]
+		}
+
 		command, ok := getCommandRegistry()[words[0]]
 		if !ok {
 			fmt.Println("Unknown command")
 			continue
 		} else {
-			err := command.callback(cfg)
+			err := command.callback(cfg, arg)
 			if err != nil {
 				fmt.Println(err)
 			}

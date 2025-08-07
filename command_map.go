@@ -5,7 +5,11 @@ import (
 	"fmt"
 )
 
-func commandMap(cfg *config) error {
+func commandMap(cfg *config, arg string) error {
+	if arg != "" {
+		return errors.New("command accepts no arguments")
+	}
+
 	var directionURL *string
 
 	if cfg.backward {
@@ -31,11 +35,11 @@ func commandMap(cfg *config) error {
 	return nil
 }
 
-func commandMapB(cfg *config) error {
+func commandMapB(cfg *config, arg string) error {
 	if cfg.previous == nil {
 		return errors.New("you're on the first page")
 	}
 
 	cfg.backward = true
-	return commandMap(cfg)
+	return commandMap(cfg, arg)
 }
