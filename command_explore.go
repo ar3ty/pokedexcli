@@ -7,7 +7,7 @@ import (
 
 func commandExplore(cfg *config, area string) error {
 	if area == "" {
-		return errors.New("argument is expected")
+		return errors.New("location as an argument is expected")
 	}
 
 	pocs, err := cfg.pokeapiClient.GetPokemonList(area)

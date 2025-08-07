@@ -99,3 +99,21 @@ func (c *Client) GetPokemonList(area string) (pokencounters, error) {
 
 	return pocs, nil
 }
+
+func (c *Client) GetPokemon(target string) (Pokemon, error) {
+	url := baseURL + "/pokemon/" + target
+
+	pok := Pokemon{}
+
+	body, err := c.getResponse(url)
+	if err != nil {
+		return pok, err
+	}
+
+	err = json.Unmarshal(body, &pok)
+	if err != nil {
+		return pok, fmt.Errorf("json unmarshaling is failed: %w", err)
+	}
+
+	return pok, nil
+}

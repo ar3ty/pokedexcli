@@ -14,6 +14,7 @@ type config struct {
 	next          *string
 	previous      *string
 	backward      bool
+	pokedex       map[string]pokeapi.Pokemon
 }
 
 type cliCommand struct {
@@ -53,6 +54,11 @@ func getCommandRegistry() map[string]cliCommand {
 			name:        "catch",
 			description: "Takes <pokemon> as an argument, adds target to a user's pokedex if succeded",
 			callback:    commandCatch,
+		},
+		"inspect": {
+			name:        "inspect",
+			description: "Inspects characteristics of pokemon, if it has been caught",
+			callback:    commandInspect,
 		},
 	}
 }

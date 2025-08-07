@@ -63,7 +63,7 @@ type pokencounters struct {
 	} `json:"pokemon_encounters"`
 }
 
-type pokemon struct {
+type Pokemon struct {
 	Abilities []struct {
 		Ability struct {
 			Name string `json:"name"`

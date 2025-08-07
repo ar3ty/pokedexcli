@@ -11,6 +11,7 @@ func main() {
 	cfg := &config{
 		pokeapiClient: client,
 		backward:      false,
+		pokedex:       map[string]pokeapi.Pokemon{},
 	}
 	repl(cfg)
 }
