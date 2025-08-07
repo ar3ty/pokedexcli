@@ -11,6 +11,10 @@ func commandCatch(cfg *config, target string) error {
 		return errors.New("command requires a target")
 	}
 
+	if _, ok := cfg.pokedex[target]; ok {
+		return errors.New("you already have one in your pokedex")
+	}
+
 	pokemon, err := cfg.pokeapiClient.GetPokemon(target)
 	if err != nil {
 		return err
@@ -22,6 +26,7 @@ func commandCatch(cfg *config, target string) error {
 	if chance < 40 {
 		cfg.pokedex[target] = pokemon
 		fmt.Printf("%s was caught!\n", target)
+		fmt.Println("You may now inspect it with the inspect command")
 	} else {
 		fmt.Printf("%s escaped!\n", target)
 	}
