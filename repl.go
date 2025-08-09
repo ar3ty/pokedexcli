@@ -24,11 +24,6 @@ type cliCommand struct {
 	callback    func(*config, string) error
 }
 
-type History struct {
-	array   []string
-	current int
-}
-
 func getCommandRegistry() map[string]cliCommand {
 	return map[string]cliCommand{
 		"exit": {

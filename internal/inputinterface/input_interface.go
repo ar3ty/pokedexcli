@@ -23,7 +23,7 @@ type Input struct {
 func Init(words []string) Reader {
 	return Reader{
 		keywords:      words,
-		history:       []string{},
+		history:       []string{""},
 		current:       0,
 		historyBuffer: nil,
 	}
@@ -78,6 +78,15 @@ func (r *Reader) autoComplete(prefix string, input *Input) {
 	}
 }
 
+func (r *Reader) lineRedraw(toDraw string, input *Input) {
+	if input.cursor > 0 {
+		fmt.Printf("\x1b[%dD", input.cursor)
+	}
+	fmt.Print("\x1b[K")
+	fmt.Printf("%s", toDraw)
+	input.cursor = len(toDraw)
+}
+
 func (r *Reader) Read() (string, error) {
 	oldTerminal, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
@@ -101,10 +110,26 @@ func (r *Reader) Read() (string, error) {
 		switch char {
 		case '\r':
 			fmt.Print("\n\r")
-			return string(input.buffer), nil
+			value := string(input.buffer)
+			if input.cursor > 0 && len(strings.Fields(value)) > 0 {
+				r.history[r.current] = value
+				if r.current == len(r.history)-1 {
+					r.history = append(r.history, "")
+				}
+				r.current = len(r.history) - 1
+			}
+			return value, nil
 		case '\n':
 			fmt.Print("\n\r")
-			return string(input.buffer), nil
+			value := string(input.buffer)
+			if input.cursor > 0 && len(strings.Fields(value)) > 0 {
+				r.history[r.current] = value
+				if r.current == len(r.history)-1 {
+					r.history = append(r.history, "")
+				}
+				r.current = len(r.history) - 1
+			}
+			return value, nil
 		//tab is assigned to autocompletion
 		case '\t':
 			if len(input.buffer) == 0 {
@@ -122,11 +147,21 @@ func (r *Reader) Read() (string, error) {
 				//arrow up
 				case 'A':
 					if r.current > 0 {
-						fmt.Print(strings.Repeat("\b", len(input.buffer[input.cursor+1:])+1))
+						r.history[r.current] = string(input.buffer)
+						r.current--
+						recovered := r.history[r.current]
+						r.lineRedraw(recovered, &input)
+						input.buffer = []rune(recovered)
 					}
 				//arrow down
 				case 'B':
-					fmt.Print("\r\x1b[0K")
+					if r.current < len(r.history)-1 {
+						r.history[r.current] = string(input.buffer)
+						r.current++
+						recovered := r.history[r.current]
+						r.lineRedraw(recovered, &input)
+						input.buffer = []rune(recovered)
+					}
 				//arrow right
 				case 'C':
 					if input.cursor < len(input.buffer) {
