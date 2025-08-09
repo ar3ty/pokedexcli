@@ -1,11 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"os"
+	"maps"
+	"slices"
 	"strings"
 
+	"github.com/ar3ty/pokedexcli/internal/inputinterface"
 	"github.com/ar3ty/pokedexcli/internal/pokeapi"
 )
 
@@ -21,6 +22,11 @@ type cliCommand struct {
 	name        string
 	description string
 	callback    func(*config, string) error
+}
+
+type History struct {
+	array   []string
+	current int
 }
 
 func getCommandRegistry() map[string]cliCommand {
@@ -75,14 +81,19 @@ func cleanInput(text string) []string {
 }
 
 func repl(cfg *config) {
-	reader := bufio.NewScanner(os.Stdin)
+	keywords := slices.Collect(maps.Keys(getCommandRegistry()))
+	reader := inputinterface.Init(keywords)
 
 	for {
 		fmt.Print("Pokedex > ")
-		reader.Scan()
+		text, err := reader.Read()
+		if err != nil {
+			fmt.Println(err)
+		}
 
-		words := cleanInput(reader.Text())
+		words := cleanInput(text)
 		if len(words) == 0 {
+			fmt.Println("Empty input. See 'help' for list of available commands.")
 			continue
 		}
 
@@ -93,7 +104,7 @@ func repl(cfg *config) {
 
 		command, ok := getCommandRegistry()[words[0]]
 		if !ok {
-			fmt.Println("Unknown command")
+			fmt.Println("Unknown command. See 'help' for list of available commands.")
 			continue
 		} else {
 			err := command.callback(cfg, arg)
