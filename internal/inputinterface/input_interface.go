@@ -11,6 +11,7 @@ import (
 type Reader struct {
 	keywords      []string
 	history       []string
+	original      []string
 	current       int
 	historyBuffer []rune
 }
@@ -24,6 +25,7 @@ func Init(words []string) Reader {
 	return Reader{
 		keywords:      words,
 		history:       []string{""},
+		original:      []string{""},
 		current:       0,
 		historyBuffer: nil,
 	}
@@ -87,6 +89,35 @@ func (r *Reader) lineRedraw(toDraw string, input *Input) {
 	input.cursor = len(toDraw)
 }
 
+func (r *Reader) proceedHistoryEntry(input *Input) (string, error) {
+	fmt.Print("\n\r")
+	value := string(input.buffer)
+	//check if anything even in input
+	if input.cursor > 0 && len(strings.Fields(value)) > 0 {
+		//if new typed command doesn't equal recorded
+		//it means that we return original value
+		//at that history slot. otherwise remains
+		//edited non-original
+		if value != r.original[r.current] {
+			r.history[r.current] = r.original[r.current]
+		}
+		//even if typed command equal recorded we proceed
+		//with recording new command in new slot as in bash cli
+		//but only if it is not penultimate in our history
+		//in that case it is redundant to refresh list
+		if r.current != len(r.history)-2 {
+			r.history[len(r.history)-1] = value
+			//recording an original duplicate to trace
+			//if we were editing it even without pressing the enter
+			r.original[len(r.history)-1] = value
+			r.history = append(r.history, "")
+			r.original = append(r.original, "")
+		}
+		r.current = len(r.history) - 1
+	}
+	return value, nil
+}
+
 func (r *Reader) Read() (string, error) {
 	oldTerminal, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
@@ -108,28 +139,11 @@ func (r *Reader) Read() (string, error) {
 
 		char := rune(buf[0])
 		switch char {
+		//return value and update history
 		case '\r':
-			fmt.Print("\n\r")
-			value := string(input.buffer)
-			if input.cursor > 0 && len(strings.Fields(value)) > 0 {
-				r.history[r.current] = value
-				if r.current == len(r.history)-1 {
-					r.history = append(r.history, "")
-				}
-				r.current = len(r.history) - 1
-			}
-			return value, nil
+			return r.proceedHistoryEntry(&input)
 		case '\n':
-			fmt.Print("\n\r")
-			value := string(input.buffer)
-			if input.cursor > 0 && len(strings.Fields(value)) > 0 {
-				r.history[r.current] = value
-				if r.current == len(r.history)-1 {
-					r.history = append(r.history, "")
-				}
-				r.current = len(r.history) - 1
-			}
-			return value, nil
+			return r.proceedHistoryEntry(&input)
 		//tab is assigned to autocompletion
 		case '\t':
 			if len(input.buffer) == 0 {
